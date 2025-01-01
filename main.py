@@ -3,19 +3,21 @@ import hashlib
 import itertools
 import os
 import random
+import re
+import datetime
+
 from functools import cached_property
 from pathlib import Path
 from typing import List
 
-import cv2
 import requests
 from PIL import ImageFont
 from dotenv import load_dotenv
 from markdown import Markdown
 from moviepy import *
 
+from effects.AlphaEffect import AlphaEffect
 from effects.BgEffect import BgEffect
-from effects.ImgEffect import ImgEffect
 
 parser = argparse.ArgumentParser(prog='Text2Video', description='This app converts text to video.')
 parser.add_argument("markdown_file")
@@ -35,8 +37,7 @@ args = parser.parse_args()
 FONT_HEIGHT = 0
 SPACE_WIDTH = 0
 IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp'}
-
-import re
+SHORT_DELAY = 0.5
 
 
 class ContentText:
@@ -135,10 +136,22 @@ class ContentPage:
 
     def __init__(self):
         self.is_image = False
+        self.with_audio = True
         self.clips: List[List[TextClip|ImageClip|str]] = [[]]
         self.__height = FONT_HEIGHT
         self.__line_width = 0
         self.__audio = None
+
+    @property
+    def duration(self):
+        return self.clips[0][0].duration + SHORT_DELAY
+
+    def set_duration(self, duration):
+        for i, line_clip in enumerate(self.clips):
+            for j, clip in enumerate(line_clip):
+                self.clips[i][j] = clip.with_duration(duration)
+
+        self.with_audio = False
 
     @property
     def audio(self):
@@ -221,6 +234,12 @@ class ContentShort:
         self.name = name
         self.pages = []
 
+        self.add_text(ContentText(name.upper()))
+        for page in self.pages:
+            page.set_duration(2)
+
+        self.pages.append(ContentPage())
+
     def add_text(self, text: ContentText):
         if len(self.pages) == 0:
             self.pages.append(ContentPage())
@@ -249,15 +268,9 @@ class Content:
         self.shorts.append(ContentShort(name))
 
     def add_text(self, text: ContentText):
-        if len(self.shorts) == 0:
-            self.add_short()
-
         self.shorts[-1].add_text(text)
 
     def add_image(self, img: ContentImage):
-        if len(self.shorts) == 0:
-            self.add_short()
-
         self.shorts[-1].add_image(img)
 
 
@@ -319,8 +332,12 @@ def parse_markdown(filename):
     return content
 
 def load_audio(short: ContentShort):
-    offset = 0
+    offset = SHORT_DELAY
     for page in short.pages: # type: ContentPage
+        if not page.with_audio:
+            offset += page.duration
+            continue
+
         if page.is_image:
             text = page.clips[0][1]
         else:
@@ -377,14 +394,13 @@ def render_short(short: ContentShort, bg_image):
         return
 
     audio_clips, video_clips = [], []
-    duration = 0
-    offset = 0
-    color_padding = 20
+    offset = duration = SHORT_DELAY
+    color_padding = (20, 10)
 
     def color_pos(pos_fn):
         def calc(t):
             pos = pos_fn(t)
-            return pos[0] - color_padding / 2, pos[1] - color_padding / 2
+            return pos[0] - color_padding[0] / 2, pos[1] - color_padding[1] / 2
 
         return calc
 
@@ -393,33 +409,57 @@ def render_short(short: ContentShort, bg_image):
 
         for line_clips in page.clips:
             for clip in line_clips:
-                video_clips.append(ColorClip(
-                    (clip.size[0] + color_padding, clip.size[1] + color_padding),
-                    (255, 111, 6)
-                ).with_layer_index(1).with_start(offset).with_duration(
-                    clip.duration
-                ).with_position(color_pos(clip.pos)))
+                if page.with_audio:
+                    color_duration = clip.duration + 0.1
+                    video_clips.append(ColorClip(
+                        (clip.size[0] + color_padding[0], clip.size[1] + color_padding[1]),
+                        color=(255, 111, 6)
+                    ).with_layer_index(1).with_start(offset - 0.1).with_duration(
+                        color_duration
+                    ).with_position(color_pos(clip.pos)))
 
-                offset += clip.duration
+                    video_clips.append(clip.with_start(duration).with_layer_index(2).with_duration(
+                        page.audio.duration
+                    ))
 
-                video_clips.append(clip.with_start(duration).with_layer_index(2).with_duration(
-                    page.audio.duration
-                ))
+                    offset += clip.duration
+                else:
+                    video_clips.append(clip.with_start(duration).with_layer_index(2))
 
 
-        audio_clips.append(page.audio)
-        duration += page.audio.duration
+        if not page.with_audio:
+            duration += page.duration
+            offset += page.duration
+        else:
+            audio_clips.append(page.audio)
+            duration += page.audio.duration
 
-    background = ImageClip(bg_image, duration=duration).with_effects([
-        BgEffect(width=args.width, height=args.height, duration=duration)
+    logo = ImageClip(
+        img="./assets/itboom-uz-logo-white.png",
+        duration=duration + SHORT_DELAY,
+    ).with_position(("center", 50))
+
+    footer = TextClip(
+        text=f"{datetime.date.today().year} © itboom.uz",
+        text_align="center",
+        font=ContentText.get_font_path(True, False, False),
+        font_size=50,
+        color="black",
+        stroke_color="white",
+        stroke_width=3,
+        margin=(50, 50),
+        duration=duration + SHORT_DELAY,
+    ).with_position(("center", "bottom"))
+
+    background = ImageClip(bg_image, duration=duration + SHORT_DELAY).with_effects([
+        BgEffect(width=args.width, height=args.height, duration=duration + SHORT_DELAY)
     ])
 
     for i, clip in enumerate(video_clips):
-        if type(clip) == ImageClip:
-            print("Found img", i)
-            video_clips[i] = clip.with_effects([ImgEffect(background)])
+        if type(clip) in {ImageClip, ColorClip}:
+            video_clips[i] = clip.with_effects([AlphaEffect(background)])
 
-    video = CompositeVideoClip([background, *video_clips])
+    video = CompositeVideoClip([background, logo, footer, *video_clips])
     video.audio = CompositeAudioClip(audio_clips)
     video.write_videofile(output_file, fps=args.fps, codec='libx264', audio_codec="aac")
 

@@ -1,4 +1,4 @@
-# raqamlar-math
+# Raqamlar haqida
 Raqamlar ***kundalik*** **hayotimizda** ishlatadigan eng ko'p *matematik* belgilardir. Raqamlarni sonlar bilan adashtirmaslik lozim. Raqam – bu belgi ya'ni sonlarni ifodalash uchun qo'llaniladigan matematik belgilardir.
 
 ![Ularga no'l bir ikki uch to'rt besh olti yetti sakkiz to'qqiz belgilari kiradi va arab raqamlari deyiladi](./raqamlar.png)
@@ -6,7 +6,7 @@ Raqamlar ***kundalik*** **hayotimizda** ishlatadigan eng ko'p *matematik* belgil
 Biz esa, ushbu belgilardan foydalanib sonlar hosil qilamiz. Sonlarni esa hayotda sanaladigan narsalarni ifodalash uchun qo'llaymiz. 
 Tarixda raqamlarni nafaqat biz bilgan belgilar, balki so'zlar va harflar orqali ham ifodalashgan. Jumladan, rim@ai(riym) raqamlari shu toifaga kiradi.
 
-# raqamlar-code
+# Dasturlashda raqamlar
 Dasturlash tilida raqamlar bilan ishlash juda oddiy. Klaviatura (tugmatag) orqali mos belgilarni bosib dastur kodida kerakli raqamni yozsa boʻladi.
 
 ![Ya'ni dasturlash tillarida ishlatiladigan raqamlar oʻzimiz ishlatadigan raqamlar bilan bir xil ma’noga ega.](./raqamlar-keyboard.png)
