@@ -1,0 +1,25 @@
+{
+  "latest-preset": {
+    "theme": "seti",
+    "backgroundColor": "white",
+    "windowTheme": "none",
+    "windowControls": true,
+    "fontFamily": "Space Mono",
+    "fontSize": "18px",
+    "lineNumbers": true,
+    "firstLineNumber": 1,
+    "selectedLines": "*",
+    "dropShadow": false,
+    "dropShadowOffsetY": "20px",
+    "dropShadowBlurRadius": "68px",
+    "widthAdjustment": false,
+    "width": "20000px",
+    "lineHeight": "140%",
+    "paddingVertical": "8px",
+    "paddingHorizontal": "8px",
+    "squaredImage": false,
+    "watermark": false,
+    "exportSize": "2x",
+    "type": "png"
+  }
+}

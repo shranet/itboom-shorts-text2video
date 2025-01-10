@@ -5,6 +5,7 @@ import os
 import random
 import re
 import datetime
+import subprocess
 
 from functools import cached_property
 from pathlib import Path
@@ -15,6 +16,7 @@ from PIL import ImageFont
 from dotenv import load_dotenv
 from markdown import Markdown
 from moviepy import *
+from urllib3.util.ssl_match_hostname import match_hostname
 
 from effects.AlphaEffect import AlphaEffect
 from effects.BgEffect import BgEffect
@@ -25,6 +27,7 @@ parser.add_argument("--width", required=False, default=1080, type=int)
 parser.add_argument("--height", required=False, default=1920, type=int)
 parser.add_argument("--fps", required=False, default=30, type=int)
 parser.add_argument("-a", "--audio-directory", required=False, default="./audio")
+parser.add_argument("-c", "--code-directory", required=False, default="./code")
 parser.add_argument("-o", "--output-directory", required=False, default="./output")
 parser.add_argument("--bg-path", required=False, default="./assets/background")
 parser.add_argument("--font-path", required=False, default="./assets/fonts")
@@ -41,35 +44,32 @@ SHORT_DELAY = 0.5
 
 
 class ContentText:
-    def __init__(self, text, is_bold=False, is_italic=False, is_code=False):
-        self.inline = "\n" not in text
+    def __init__(self, text, is_bold=False, is_italic=False):
         self.text = text
-        self.font = self.get_font_path(is_bold, is_italic, is_code)
+        self.font = self.get_font_path(is_bold, is_italic)
 
     @classmethod
     def get_font_max_height(cls):
-        all_combos = list(itertools.product([False, True], repeat=3))
+        all_combos = list(itertools.product([False, True], repeat=2))
 
         max_height = 0
-        for is_bold, is_italic, is_code in all_combos:
-            height = cls.get_font_height(is_bold, is_italic, is_code)
+        for is_bold, is_italic in all_combos:
+            height = cls.get_font_height(is_bold, is_italic)
             if height > max_height:
                 max_height = height
         return max_height
 
     @classmethod
-    def get_font_height(cls, is_bold=False, is_italic=False, is_code=False):
-        font = ImageFont.truetype(cls.get_font_path(is_bold, is_italic, is_code), size=args.font_size)
+    def get_font_height(cls, is_bold=False, is_italic=False):
+        font = ImageFont.truetype(cls.get_font_path(is_bold, is_italic), size=args.font_size)
         ascent, descent = font.getmetrics()
         return ascent + descent
 
     @staticmethod
-    def get_font_path(is_bold=False, is_italic=False, is_code=False):
+    def get_font_path(is_bold=False, is_italic=False):
         font_file_name = [
             args.font_name
         ]
-        if is_code:
-            font_file_name.append("mono")
 
         if is_bold:
             font_file_name.append("bold")
@@ -102,7 +102,7 @@ class ContentText:
             ai_text = match.group(2)
             return ai_text if ai else normal_text
 
-        pattern = r"(\w+)@ai\((\w+)\)"
+        pattern = r"(\w+)@ai\(([^)]+)\)"
         processed_text = re.sub(pattern, replace_pattern, input_text)
 
         return processed_text
@@ -130,14 +130,61 @@ class ContentImage:
         return clip
 
 
+class ContentCode(ContentImage):
+    FILE_EXT = {
+        "c": ".c",
+        "python": ".py"
+    }
+
+    def __init__(self, code):
+        lines = code.splitlines()
+        language = lines.pop(0).lower()
+        if language not in self.FILE_EXT:
+            raise Exception(f"{language} not allowed")
+
+        pattern = r".*@ai\(([^)]+)\).*"
+        alt = []
+        for i in range(len(lines) - 1, -1, -1):
+            line = lines[i]
+            m = re.match(pattern, line)
+            if not m:
+                continue
+
+            lines.pop(i)
+            alt.append(m.group(1))
+
+        if not alt:
+            alt.append("dastur kodi")
+
+        code_file_name = hashlib.md5(code.encode('utf-8')).hexdigest()
+        code_file = os.path.join(args.code_directory, code_file_name + ".png")
+        if not os.path.exists(code_file):
+            example_file_name = f"code{self.FILE_EXT[language]}"
+            with open(example_file_name, "w") as f:
+                f.write("\n".join(lines))
+
+            subprocess.run([
+                "carbon-now",
+                example_file_name,
+                "--save-to",
+                args.code_directory, "--save-as",
+                code_file_name, "--config", "./carbon-config.json"
+            ])
+
+            os.remove(example_file_name)
+
+        super().__init__(code_file, "\n".join(alt))
+
+
 class ContentPage:
     WIDTH = args.width - 2 * args.text_padding
     HEIGHT = args.height // 2
 
-    def __init__(self):
+    def __init__(self, is_code=False):
+        self.is_code = is_code
         self.is_image = False
         self.with_audio = True
-        self.clips: List[List[TextClip|ImageClip|str]] = [[]]
+        self.clips: List[List[TextClip | ImageClip | str]] = [[]]
         self.__height = FONT_HEIGHT
         self.__line_width = 0
         self.__audio = None
@@ -180,7 +227,6 @@ class ContentPage:
                 duration = len(clip.text) * per_letter_time
                 self.clips[i][j] = clip.with_duration(duration)
 
-
     def add_text_clips(self, clips: List[TextClip]):
         while clips:
             clip = clips.pop(0)
@@ -199,7 +245,7 @@ class ContentPage:
         return False
 
     def calculate_positions(self):
-        height = FONT_HEIGHT * len(self.clips) # FH * LINES
+        height = FONT_HEIGHT * len(self.clips)  # FH * LINES
         pos_y = (args.height - height) / 2 + FONT_HEIGHT / 2
         for i, line_clips in enumerate(self.clips):
             line_width = 0
@@ -249,7 +295,7 @@ class ContentShort:
             if self.pages[-1].add_text_clips(clips):
                 self.pages.append(ContentPage())
 
-    def add_image(self, img: ContentImage):
+    def add_image(self, img: ContentImage | ContentCode):
         if len(self.pages) == 0:
             self.pages.append(ContentPage())
 
@@ -270,7 +316,7 @@ class Content:
     def add_text(self, text: ContentText):
         self.shorts[-1].add_text(text)
 
-    def add_image(self, img: ContentImage):
+    def add_image(self, img: ContentImage | ContentCode):
         self.shorts[-1].add_image(img)
 
 
@@ -301,12 +347,16 @@ def parse_markdown(filename):
             content.add_short(elm.text)
         else:
             if text:
-                content.add_text(ContentText(
-                    text=text,
-                    is_bold="strong" in tags,
-                    is_italic="em" in tags,
-                    is_code="code" in tags
-                ))
+                is_code = "code" in tags
+                inline = "\n" not in text
+                if is_code and not inline:
+                    content.add_image(ContentCode(text))
+                else:
+                    content.add_text(ContentText(
+                        text=text,
+                        is_bold="strong" in tags,
+                        is_italic="em" in tags
+                    ))
 
             if elm.tag == "img":
                 content.add_image(ContentImage(
@@ -320,20 +370,25 @@ def parse_markdown(filename):
         tags.pop()
 
         if elm.tail:
-            content.add_text(ContentText(
-                text=elm.tail,
-                is_bold="strong" in tags,
-                is_italic="em" in tags,
-                is_code="code" in tags
-            ))
+            is_code = "code" in tags
+            inline = "\n" not in text
+            if is_code and not inline:
+                content.add_image(ContentCode(text))
+            else:
+                content.add_text(ContentText(
+                    text=text,
+                    is_bold="strong" in tags,
+                    is_italic="em" in tags
+                ))
 
     walk(root, [])
 
     return content
 
+
 def load_audio(short: ContentShort):
     offset = SHORT_DELAY
-    for page in short.pages: # type: ContentPage
+    for page in short.pages:  # type: ContentPage
         if not page.with_audio:
             offset += page.duration
             continue
@@ -426,7 +481,6 @@ def render_short(short: ContentShort, bg_image):
                 else:
                     video_clips.append(clip.with_start(duration).with_layer_index(2))
 
-
         if not page.with_audio:
             duration += page.duration
             offset += page.duration
@@ -442,7 +496,7 @@ def render_short(short: ContentShort, bg_image):
     footer = TextClip(
         text=f"{datetime.date.today().year} © itboom.uz",
         text_align="center",
-        font=ContentText.get_font_path(True, False, False),
+        font=ContentText.get_font_path(True, False),
         font_size=50,
         color="black",
         stroke_color="white",
@@ -468,7 +522,8 @@ def main():
     content = parse_markdown(args.markdown_file)
 
     p = Path(args.bg_path)
-    bg_files = list(sorted([str(f.resolve()) for f in p.iterdir() if f.suffix.lower() in IMAGE_EXTENSIONS and f.is_file()]))
+    bg_files = list(
+        sorted([str(f.resolve()) for f in p.iterdir() if f.suffix.lower() in IMAGE_EXTENSIONS and f.is_file()]))
 
     for short in content.shorts:
         load_audio(short)

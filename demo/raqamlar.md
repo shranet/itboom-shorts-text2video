@@ -7,19 +7,22 @@ Biz esa, ushbu belgilardan foydalanib sonlar hosil qilamiz. Sonlarni esa hayotda
 Tarixda raqamlarni nafaqat biz bilgan belgilar, balki so'zlar va harflar orqali ham ifodalashgan. Jumladan, rim@ai(riym) raqamlari shu toifaga kiradi.
 
 # Dasturlashda raqamlar
-Dasturlash tilida raqamlar bilan ishlash juda oddiy. Klaviatura (tugmatag) orqali mos belgilarni bosib dastur kodida kerakli raqamni yozsa boʻladi.
+Dasturlash tilida raqamlar bilan ishlash juda oddiy. Klaviatura (tugmatag) orqali mos belgilarni bosib dastur kodida kerakli raqamni yozsa bo'ladi.
 
 ![Ya'ni dasturlash tillarida ishlatiladigan raqamlar oʻzimiz ishlatadigan raqamlar bilan bir xil ma’noga ega.](./raqamlar-keyboard.png)
 
-Kiritilgan raqamni ekranga chiqarish uchun maxsus funksiyalardan foydalanishimiz lozim. Masalan, 7 raqamini ekranga chiqarish uchun {lang} dasturlash tilida quyidagicha dastur kodi yoziladi:
+Kiritilgan raqamni ekranga chiqarish uchun maxsus funksiyalardan foydalanishimiz lozim. Masalan, 7 raqamini ekranga chiqarish uchun C@ai(sii) va Python@ai(Paytn) dasturlash tilida quyidagicha dastur kodi yoziladi:
 
 ```c
-//hiha
-int c;
-scanf("%d", &c);
-printf("%d", c);
+//@ai(print ef qo'shtirnoq ichida foiz dii, verguldan keyin yetti raqami)
+int main() {
+    printf("%d", 7);
+    return 0;
+}
 ```
 
 ```python
-print(7)
+#@ai(print qavs ichida yetti raqami)
+if __name__ == '__main__':
+    print(7)
 ```
