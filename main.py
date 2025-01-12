@@ -41,7 +41,7 @@ FONT_HEIGHT = 0
 SPACE_WIDTH = 0
 IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp'}
 SHORT_DELAY = 0.5
-
+AUDIO_MODEL = "jaxongir"
 
 class ContentText:
     def __init__(self, text, is_bold=False, is_italic=False):
@@ -156,12 +156,13 @@ class ContentCode(ContentImage):
         if not alt:
             alt.append("dastur kodi")
 
-        code_file_name = hashlib.md5(code.encode('utf-8')).hexdigest()
+        source = "\n".join(lines)
+        code_file_name = hashlib.md5(source.encode('utf-8')).hexdigest()
         code_file = os.path.join(args.code_directory, code_file_name + ".png")
         if not os.path.exists(code_file):
             example_file_name = f"code{self.FILE_EXT[language]}"
             with open(example_file_name, "w") as f:
-                f.write("\n".join(lines))
+                f.write(source)
 
             subprocess.run([
                 "carbon-now",
@@ -180,8 +181,7 @@ class ContentPage:
     WIDTH = args.width - 2 * args.text_padding
     HEIGHT = args.height // 2
 
-    def __init__(self, is_code=False):
-        self.is_code = is_code
+    def __init__(self):
         self.is_image = False
         self.with_audio = True
         self.clips: List[List[TextClip | ImageClip | str]] = [[]]
@@ -272,7 +272,10 @@ class ContentPage:
         return self.__height
 
     def __len__(self):
-        return len(self.clips)
+        if not self.clips:
+            return 0
+
+        return len(self.clips[0])
 
 
 class ContentShort:
@@ -290,6 +293,9 @@ class ContentShort:
         if len(self.pages) == 0:
             self.pages.append(ContentPage())
 
+        if self.pages[-1].is_image:
+            self.pages.append(ContentPage())
+
         clips = text.clips
         while clips:
             if self.pages[-1].add_text_clips(clips):
@@ -303,7 +309,6 @@ class ContentShort:
             self.pages.append(ContentPage())
 
         self.pages[-1].add_image_clip(img.clip, img.alt)
-        self.pages.append(ContentPage())
 
 
 class Content:
@@ -370,16 +375,18 @@ def parse_markdown(filename):
         tags.pop()
 
         if elm.tail:
-            is_code = "code" in tags
-            inline = "\n" not in text
-            if is_code and not inline:
-                content.add_image(ContentCode(text))
-            else:
-                content.add_text(ContentText(
-                    text=text,
-                    is_bold="strong" in tags,
-                    is_italic="em" in tags
-                ))
+            tail = elm.tail.strip()
+            if tail:
+                is_code = "code" in tags
+                inline = "\n" not in tail
+                if is_code and not inline:
+                    content.add_image(ContentCode(tail))
+                else:
+                    content.add_text(ContentText(
+                        text=tail,
+                        is_bold="strong" in tags,
+                        is_italic="em" in tags
+                    ))
 
     walk(root, [])
 
@@ -402,7 +409,7 @@ def load_audio(short: ContentShort):
 
             text = " ".join(lines)
 
-        audio_file = os.path.join("./audio", hashlib.md5(text.encode('utf-8')).hexdigest() + ".mp3")
+        audio_file = os.path.join("./audio", AUDIO_MODEL + "-" + hashlib.md5(text.encode('utf-8')).hexdigest() + ".mp3")
         if os.path.exists(audio_file):
             page.audio = AudioFileClip(audio_file).with_start(offset)
             offset += page.audio.duration
@@ -414,7 +421,7 @@ def load_audio(short: ContentShort):
                 "transcript": text,
                 "language": "uz",
                 "run_diarization": "false",
-                "model": "jaxongir"
+                "model": AUDIO_MODEL
             },
             headers={
                 "x-api-key": os.getenv('AISHA_TOKEN'),
@@ -443,7 +450,7 @@ def load_audio(short: ContentShort):
 
 def render_short(short: ContentShort, bg_image):
     print(f"Render {short.name} ... ", end="")
-    output_file = os.path.join(args.output_directory, short.name + ".mp4")
+    output_file = os.path.join(args.output_directory, AUDIO_MODEL + " - " + short.name + ".mp4")
     if os.path.exists(output_file):
         print("already exists")
         return

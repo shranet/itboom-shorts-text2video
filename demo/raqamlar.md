@@ -1,5 +1,5 @@
 # Raqamlar haqida
-Raqamlar ***kundalik*** **hayotimizda** ishlatadigan eng ko'p *matematik* belgilardir. Raqamlarni sonlar bilan adashtirmaslik lozim. Raqam – bu belgi ya'ni sonlarni ifodalash uchun qo'llaniladigan matematik belgilardir.
+Raqamlar kundalik hayotimizda ishlatadigan eng ko'p **matematik** belgilardir. Raqamlarni sonlar bilan adashtirmaslik lozim. Raqam – bu belgi ya'ni sonlarni ifodalash uchun qo'llaniladigan matematik belgilardir.
 
 ![Ularga no'l bir ikki uch to'rt besh olti yetti sakkiz to'qqiz belgilari kiradi va arab raqamlari deyiladi](./raqamlar.png)
 
@@ -11,18 +11,20 @@ Dasturlash tilida raqamlar bilan ishlash juda oddiy. Klaviatura (tugmatag) orqal
 
 ![Ya'ni dasturlash tillarida ishlatiladigan raqamlar oʻzimiz ishlatadigan raqamlar bilan bir xil ma’noga ega.](./raqamlar-keyboard.png)
 
-Kiritilgan raqamni ekranga chiqarish uchun maxsus funksiyalardan foydalanishimiz lozim. Masalan, 7 raqamini ekranga chiqarish uchun C@ai(sii) va Python@ai(Paytn) dasturlash tilida quyidagicha dastur kodi yoziladi:
+Kiritilgan raqamni ekranga chiqarish uchun esa maxsus funksiyalardan foydalanishimiz lozim. Masalan, 7 raqamini ekranga chiqarish uchun C@ai(sii) dasturlash tilida:
 
 ```c
-//@ai(print ef qo'shtirnoq ichida foiz dii, verguldan keyin yetti raqami)
+//@ai(print ef funksiyasi ichida qo'shtirnoqda foiz dii verguldan keyin esa yetti raqami yoziladi)
 int main() {
     printf("%d", 7);
     return 0;
 }
 ```
 
+Python@ai(Paytn) dasturlash tilida esa:
+
 ```python
-#@ai(print qavs ichida yetti raqami)
+"""@ai(print funksisiyasi ichida yetti raqami yoziladi)"""
 if __name__ == '__main__':
     print(7)
 ```
