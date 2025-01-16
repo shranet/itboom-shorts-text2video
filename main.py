@@ -16,7 +16,6 @@ from PIL import ImageFont
 from dotenv import load_dotenv
 from markdown import Markdown
 from moviepy import *
-from urllib3.util.ssl_match_hostname import match_hostname
 
 from effects.AlphaEffect import AlphaEffect
 from effects.BgEffect import BgEffect
