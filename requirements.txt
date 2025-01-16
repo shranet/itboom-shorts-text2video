@@ -1,0 +1,17 @@
+certifi==2024.12.14
+charset-normalizer==3.4.1
+decorator==5.1.1
+idna==3.10
+imageio==2.36.1
+imageio-ffmpeg==0.5.1
+Markdown==3.7
+moviepy==2.1.1
+numpy==2.2.1
+opencv-python==4.10.0.84
+pillow==10.4.0
+proglog==0.1.10
+python-dotenv==1.0.1
+requests==2.32.3
+setuptools==75.6.0
+tqdm==4.67.1
+urllib3==2.3.0
