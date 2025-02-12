@@ -32,7 +32,7 @@ parser.add_argument("--bg-path", required=False, default="./assets/background")
 parser.add_argument("--font-path", required=False, default="./assets/fonts")
 parser.add_argument("--font-name", required=False, default="roboto")
 parser.add_argument("--font-size", required=False, default=100, type=int)
-parser.add_argument("--text-padding", required=False, default=50, type=int)
+parser.add_argument("--text-padding", required=False, default=80, type=int)
 
 args = parser.parse_args()
 
@@ -116,7 +116,7 @@ class ContentImage:
     def clip(self):
         clip = ImageClip(self.file, duration=10).with_position('center', 'center')
 
-        margin = 20
+        margin = 80
         target_width, target_height = args.width - 2 * margin, args.height - 2 * margin
         target_aspect = target_width / target_height
         clip_aspect = clip.w / clip.h
@@ -497,7 +497,7 @@ def render_short(short: ContentShort, bg_image):
     logo = ImageClip(
         img="./assets/itboom-uz-logo-white.png",
         duration=duration + SHORT_DELAY,
-    ).with_position(("center", 50))
+    ).with_position(("center", 150))
 
     footer = TextClip(
         text=f"{datetime.date.today().year} © itboom.uz",
